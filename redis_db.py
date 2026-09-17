@@ -75,12 +75,19 @@ class Redis(r):
         return self.set(key, value)
 
 
-db = Redis(
-    host=HOST,
-    port=PORT,
-    password=PASSWORD if len(PASSWORD) > 1 else None,
+import os
+
+# Render ka internal host aur port yahan seedha daal dein
+redis_host_url = os.getenv("REDIS_URL", "red-dalrvbid0e5s738eg8ag:6379")
+
+db = RedisStr(
+    host=redis_host_url,
+    port=6379, # Agar URL mein port sath mein hai toh code khud split kar lega (lines 27-29 dekhein)
+    password=None,
     decode_responses=True,
 )
+
+
 
 
 log.info(f"Starting redis on {HOST}:{PORT}")
