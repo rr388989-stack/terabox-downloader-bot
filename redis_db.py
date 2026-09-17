@@ -5,15 +5,11 @@ import threading
 import typing
 from typing import Any
 
-from redis import Redis as r
-
-from config import HOST, PASSWORD, PORT
+from redis import Redis as redis_base
 
 log = logging.getLogger("telethon")
 
-
-class Redis(r):
-
+class RedisStr(redis_base):
     def __init__(
         self,
         host: str = None,
@@ -21,7 +17,7 @@ class Redis(r):
         password: str = None,
         logger=log,
         encoding: str = "utf-8",
-        decode_responses=True,
+        decode_responses: str = True,
         **kwargs,
     ):
         if ":" in host:
@@ -29,24 +25,22 @@ class Redis(r):
             host = data[0]
             port = int(data[1])
         if host.startswith("http"):
-            logger.error("Your REDIS_URI should not start with http!")
-            sys.exit()
+            logger.error("Your REDIS_URL should not start with http")
+            sys.exit(1)
         elif not host or not port:
             logger.error("Port Number not found")
-            sys.exit()
+            sys.exit(1)
         kwargs["host"] = host
-        if password and len(password) > 1:
+        if password and len(password) >= 1:
             kwargs["password"] = password
         kwargs["port"] = port
         kwargs["encoding"] = encoding
         kwargs["decode_responses"] = decode_responses
-        # kwargs['client_name'] = client_name
-        # kwargs['username'] = username
         try:
             super().__init__(**kwargs)
-        except Exception as e:
-            logger.exception(f"Error while connecting to redis: {e}")
-            sys.exit()
+        except Exception as w:
+            logger.exception(f"Error while connecting to redis: {w}")
+            sys.exit(1)
         self.logger = logger
         self._cache = {}
         threading.Thread(target=self.re_cache).start()
@@ -55,7 +49,7 @@ class Redis(r):
         key = self.keys()
         for keys in key:
             self._cache[keys] = self.get(keys)
-        self.logger.info("Cached {} keys".format(len(self._cache)))
+            self.logger.info("Cached {} keys".format(len(self._cache)))
 
     def get_key(self, key: Any):
         if key in self._cache:
@@ -74,23 +68,13 @@ class Redis(r):
         self._cache[key] = value
         return self.set(key, value)
 
-
-import os
-
-# Render ka internal host aur port yahan seedha daal dein
+# Render ke environment variable se URL uthayega
 redis_host_url = os.getenv("REDIS_URL", "red-dalrvbid0e5s738eg8ag:6379")
 
 db = RedisStr(
     host=redis_host_url,
-    port=6379, # Agar URL mein port sath mein hai toh code khud split kar lega (lines 27-29 dekhein)
+    port=6379,
     password=None,
     decode_responses=True,
 )
 
-
-
-
-log.info(f"Starting redis on {HOST}:{PORT}")
-if not db.ping():
-    log.error(f"Redis is not available on {HOST}:{PORT}")
-    exit(1)
